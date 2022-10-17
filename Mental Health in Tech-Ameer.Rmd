@@ -1,0 +1,130 @@
+---
+title: "Mental Health in Tech"
+author: "Mohammed Sohail Ameer"
+date: "2022-10-16"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Loading Library Packages
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(arules)
+library(arulesViz)
+```
+## Loading Mental Health Data
+
+```{r}
+sheet_1_data <- read_excel("survey.xlsx", sheet = "Sheet1", 
+                              col_types = c("date", "numeric", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text"))
+
+sheet_2_data <- read_excel("survey.xlsx", sheet = "Sheet 2", 
+                              col_types = c("date", "numeric", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text", "text", 
+                                            "text", "text", "text", "text"))
+
+#Merging the datasheets
+mental_data <- merge(sheet_1_data, sheet_2_data, all.x= TRUE, all.y = TRUE) 
+```
+## Preparing Mental Data
+
+```{r}
+#Removing missing values
+
+newdata <- na.omit(mental_data)
+```
+```{r}
+#Fixing Gender Column
+
+data_male <- c("Male ","Cis Man", "Malr", "Male", "male", "M", "m", "Male-ish", "maile", "Mal", "Male (CIS)", "Cis Male", "Make", "Male", "Man", "msle", "Mail", "cis male","ostensibly male, unsure what that really means")
+
+data_female <- c("Female ","femail","Female (cis)","female","Female","F","Woman","f","queer/she/they","Femake","woman","Female","cis-female/femme")
+
+data_transgender <-c ("ostensibly male","unsure what that really means","p","A little about you","queer","Female (trans)","Neuter","Trans woman","Trans-female","Cis Female","something kinda male?","non-binary","Nah","All","Enby","fluid","Genderqueer","Androgyne","Agender","Guy (-ish) ^_^","male leaning androgynous")
+
+mental_data$Gender <- sapply(
+  as.vector(mental_data$Gender),
+  function(a) if(a %in% data_male) "Male" else a ) 
+
+mental_data$Gender <- sapply(
+  as.vector(mental_data$Gender),
+  function(a) if(a %in% data_female) "Female" else a ) 
+
+mental_data$Gender <- sapply(
+  as.vector(mental_data$Gender),
+  function(a) if(a %in% data_transgender) "Trans" else a )
+
+#Setting Gender Data
+
+mental_data$Gender <- as.factor(mental_data$Gender)
+```
+```{r}
+#Choosing only United States Data
+
+mental_data <- mental_data %>% filter(Country == "United States")
+```
+```{r}
+# Timestamp,comments removed from dataframe 
+
+mental_data <- mental_data %>% select(-c(Timestamp,comments))
+```
+```{r}
+#Fixing Age Column
+mental_data<- mental_data %>% mutate(Age = ifelse(Age < 10 | Age > 75 ,NA, Age))
+```
+```{r}
+#Viewing Final Data
+
+mental_data
+```
+## Dataframe Summary
+
+```{r mental_data_data_summary}
+summary(mental_data)
+```
+## Data Visualization
+
+```{r}
+#Histogram plot of Age Distribution of Dataframe
+
+summary(mental_data$Age)
+ggplot(mental_data,aes(x=Age))+geom_histogram(aes(y=..density..),fill="cyan")+geom_density(col="red",size=1)+labs(x="Age",title="Age Distribution")
+```
+```{r}
+#Bar plot of Employees working in various companies
+
+mental_data %>% ggplot(aes(x=no_employees,fill=no_employees))+geom_bar(stat="count")+labs(title="Employees working in various companies")+theme(legend.position = "")
+```
+```{r}
+#Bar plot of finding if employees undergo treatment or not
+
+mental_data %>% ggplot(aes(x=treatment,fill=treatment))+geom_bar(stat="count")+labs(title="Did employees undergo treatment?")+theme(legend.position = "")
+```
+```{r}
+
+#Bar plot of Treatment vs Employee
+
+mental_data %>%select(treatment, no_employees)%>%group_by(treatment, no_employees)%>%summarise(c=n()) %>%ggplot(aes(x=treatment,y=c,fill=no_employees))+geom_bar(stat="identity",position="dodge")+labs(title="Treatment vs Employee",y="count")
+```
+```{r}
+#Saving cleaned mental data in csv format
+
+write.csv(mental_data,"cleaned_mental_data.csv")
+```
+
